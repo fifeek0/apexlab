@@ -34,10 +34,12 @@ g61_token
 # Claude Code config (local)
 .claude/
 
-# Training configs & scripts (local development)
+# Training, eval, internal docs (local development)
 configs/
 training/
 data/
+eval/
+docs/llm-training-wiki.md
 
 # IDE
 .idea/
