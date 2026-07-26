@@ -33,6 +33,7 @@ g61_token
 
 # Claude Code config (local)
 .claude/
+.github/
 
 # Training, eval, internal docs (local development)
 configs/
