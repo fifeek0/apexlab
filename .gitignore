@@ -31,6 +31,14 @@ eval/judge_input.json
 g61_token
 *.token
 
+# Claude Code config (local)
+.claude/
+
+# Training configs & scripts (local development)
+configs/
+training/
+data/
+
 # IDE
 .idea/
 .vscode/
