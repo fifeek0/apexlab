@@ -35,11 +35,12 @@ g61_token
 .claude/
 .github/
 
-# Training, eval, internal docs (local development)
+# Training, eval, internal docs & tools (local development)
 configs/
 training/
 data/
 eval/
+tools/
 docs/llm-training-wiki.md
 
 # IDE

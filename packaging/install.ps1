@@ -14,7 +14,7 @@ if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
 
 $repo = "$env:USERPROFILE\iracing-suite"
 if (-not (Test-Path $repo)) {
-    git clone https://github.com/REPO_PLACEHOLDER/iracing-suite.git $repo
+    git clone https://github.com/fifeek0/apexlab.git $repo
 } else {
     git -C $repo pull --ff-only
 }
