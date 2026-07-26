@@ -1,0 +1,58 @@
+# Gemma 4 E2B Racing Coach LoRA v1
+# Based on finRegTech v2 recipe (best: lr=1e-5, r=8, 1 epoch)
+# Memory budget: ~37-52 GB bf16 on clean 128GB DGX Spark
+
+model_name: google/gemma-4-e2b-it
+dtype: bfloat16
+load_in_4bit: true  # QLoRA — bf16 OOM'd at 118/121 GB; 4-bit cuts weights from ~16 to ~5 GB
+
+# LoRA — v2 recipe (proven: 90% on fintech)
+lora_r: 8
+lora_alpha: 8
+lora_dropout: 0.0
+target_modules:
+  - q_proj
+  - k_proj
+  - v_proj
+  - o_proj
+  - gate_proj
+  - up_proj
+  - down_proj
+modules_to_save:
+  - lm_head
+  - embed_tokens
+ensure_weight_tying: true
+
+# Training — conservative (1 epoch, lr=1e-5)
+num_epochs: 1
+batch_size: 1
+gradient_accumulation_steps: 8  # effective batch = 8
+learning_rate: 1.0e-5
+lr_scheduler: cosine
+warmup_ratio: 0.1
+max_length: 2048  # cut from 4096 — OOM at 4096 even with QLoRA on 128GB Spark
+max_grad_norm: 0.3
+gradient_checkpointing: true
+weight_decay: 0.01
+seed: 42
+bf16: true
+fp16: false
+
+# Monitoring — eval every 15 steps (~3 evals per epoch of 47 steps)
+logging_steps: 5
+eval_strategy: steps
+eval_steps: 15
+save_strategy: steps
+save_steps: 15
+save_total_limit: 5
+load_best_model_at_end: true
+metric_for_best_model: eval_loss
+greater_is_better: false
+report_to: tensorboard
+
+# DGX Spark specifics
+dataloader_num_workers: 2
+dataloader_pin_memory: false  # unified memory — no pin needed
+
+# Output
+output_dir: training/output/gemma4-e2b-racing-coach-v5

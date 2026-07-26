@@ -1,0 +1,40 @@
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/
+packaging/build/
+packaging/dist/
+
+# Telemetry data (personal, never committed)
+*.ibt
+Garage 61 - *.csv
+racing_real_summaries.jsonl
+spa_gr86_summary.json
+.iracing_analysis/
+iracing_telemetry_dataset.csv
+
+# Training data & models (generated, large)
+data/racing_sft_*.jsonl
+data/racing_sft_all.jsonl
+training/output/
+*.gguf
+models/
+
+# Eval results (regenerable)
+eval/baseline_*.json
+eval/benchmark_*.json
+eval/claude_judge_scores.json
+eval/judge_input.json
+
+# Secrets
+g61_token
+*.token
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

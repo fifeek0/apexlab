@@ -1,0 +1,17 @@
+[tool.uv.workspace]
+members = [
+    "packages/iracing-core",
+    "apps/analysis",
+    "apps/overlay",
+]
+
+[tool.pytest.ini_options]
+testpaths = [
+    "packages/iracing-core/tests",
+    "apps/analysis/tests",
+    "apps/overlay/tests",
+]
+addopts = "-q"
+filterwarnings = [
+    "ignore::DeprecationWarning:pyarrow.*",
+]
