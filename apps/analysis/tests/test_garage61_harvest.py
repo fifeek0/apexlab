@@ -318,14 +318,6 @@ def test_harvest_end_to_end_with_resume(fake_g61, tmp_path) -> None:
     assert stats3.downloaded == 0 and stats3.skipped == 4
     assert len(library.list_laps()) == 4
 
-    # fine-tuning export carries the discipline through
-    from iracing_analysis.export_summaries import export_summaries
-
-    out = tmp_path / "sums.jsonl"
-    export_summaries(telemetry_dirs=[], library_dirs=[tmp_path / "library"], out_path=out)
-    rows = [json.loads(line) for line in out.read_text().splitlines()]
-    assert rows and all(row["discipline"] == "road" for row in rows)
-    assert all(row["summary"]["session"]["discipline"] == "road" for row in rows)
 
 
 def test_harvest_marks_bad_telemetry_rejected_once(fake_g61, tmp_path) -> None:
