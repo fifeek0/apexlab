@@ -284,6 +284,33 @@ same JSON can be exported for any other tooling. Custom backends implement
 
 Settings live in `~/.iracing_analysis/config.json`.
 
+### Ready-to-use endpoint configs
+
+Pick one in **Settings… ▸ AI insights** (or write `~/.iracing_analysis/config.json`
+directly). Use a **non-reasoning** model for the coach — a model that "thinks"
+before answering can spend its whole token budget on hidden reasoning and return
+an empty report; the fine-tuned coach and Gemma do not do this.
+
+| Backend | Base URL | API key | Model | Notes |
+|---|---|---|---|---|
+| **Fine-tuned coach (recommended)** | `http://localhost:11434/v1` | `local` | `racing-coach-v5` | Offline via Ollama; purpose-built, best grounding. Run `ollama run racing-coach-v5` once so Ollama is up. |
+| Gemma 26B (DGX) | `http://<dgx-ip>:8000/v1` | `none` | `gemma-4-26b-a4b` | Stronger, needs the DGX + LAN. |
+| Generic Ollama | `http://localhost:11434/v1` | `local` | `gemma3:27b` | Any local Ollama model. |
+
+Equivalent `config.json` for the recommended setup:
+
+```json
+{
+  "ai": {
+    "enabled": true,
+    "base_url": "http://localhost:11434/v1",
+    "api_key": "local",
+    "model": "racing-coach-v5",
+    "timeout_s": 120.0
+  }
+}
+```
+
 ## Live comparison overlay (`iracing-overlay`)
 
 A Bloops-style in-sim overlay comparing you live against a reference lap
