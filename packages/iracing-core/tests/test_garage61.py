@@ -225,3 +225,113 @@ def test_import_into_library(g61_csv, tmp_path) -> None:
     # round-trip out of the library
     stored = library.get_lap(rec.lap_id)
     np.testing.assert_allclose(stored.channel("Speed"), original.channel("Speed"), atol=1e-4)
+
+
+def test_filename_time_roundtrip_leading_zeros_and_millis() -> None:
+    """format -> parse must round-trip exactly, including leading-zero fields
+    (single-digit minutes/seconds, zero ms, zero seconds) and the carry-over
+    case where seconds would round up past 59 (the ``02.60.000`` trap)."""
+    from iracing_core.garage61 import format_garage61_filename, parse_garage61_filename
+
+    base_id = "01KXG5HFAB6EPNJ7BMMFRV13JB"  # 26-char, ULID-charset valid
+    cases = [
+        # (lap_time_s, expected MM.SS.mmm, lap_id)
+        (0.005, "00.00.005", "02KXG5HFAB6EPNJ7BMMFRV13JB"),   # all leading zeros
+        (59.999, "00.59.999", "03KXG5HFAB6EPNJ7BMMFRV13JB"),   # sub-minute, leading 00 min
+        (60.0, "01.00.000", "04KXG5HFAB6EPNJ7BMMFRV13JB"),     # exact minute, zero sec/ms
+        (74.123, "01.14.123", "05KXG5HFAB6EPNJ7BMMFRV13JB"),
+        (123.004, "02.03.004", "06KXG5HFAB6EPNJ7BMMFRV13JB"),  # seconds field has leading 0
+    ]
+    for lap_time, time_txt, lap_id in cases:
+        name = format_garage61_filename("Driver", "Car", "Track", lap_time, lap_id)
+        # exact composed string with the expected (leading-zero) time field
+        assert name == f"Garage 61 - Driver - Car - Track - {time_txt} - {lap_id}.csv"
+
+        info = parse_garage61_filename(name)
+        assert info["driver"] == "Driver"
+        assert info["car"] == "Car"
+        assert info["track"] == "Track"
+        assert info["lap_id"] == lap_id
+        assert info["lap_time"] == pytest.approx(lap_time, abs=5e-4)
+
+        # parse -> format round-trips to the identical filename
+        assert (
+            format_garage61_filename(
+                info["driver"], info["car"], info["track"],
+                info["lap_time"], info["lap_id"],
+            )
+            == name
+        )
+
+    # seconds rounding up must carry into the minute field, never emit "..60.."
+    carry = format_garage61_filename("D", "C", "T", 119.9996, base_id)
+    assert "02.00.000" in carry and "60" not in carry.split(" - ")[-2]
+    assert parse_garage61_filename(carry)["lap_time"] == pytest.approx(120.0, abs=5e-4)
+
+
+def test_official_time_shorter_than_telemetry_is_rejected(g61_csv, tmp_path) -> None:
+    """A filename claiming a lap time *shorter* than the recorded telemetry
+    duration leaves a negative time budget for the missing distance —
+    physically impossible, so the importer must reject it. This exercises the
+    negative-remaining-time branch, complementing the zero-remaining case in
+    test_mismatched_telemetry_is_rejected."""
+    import pandas as pd
+
+    from iracing_core.garage61 import read_garage61_csv
+
+    path, _ = g61_csv
+    frame = pd.read_csv(path)
+    cut = int(len(frame) * 0.96)
+    truncated = frame.iloc[:cut]
+
+    # filename claims a lap time 5 s shorter than the data we actually hold
+    fake_time = cut / 60.0 - 5.0
+    mins, secs = divmod(fake_time, 60.0)
+    bad = tmp_path / (
+        f"Garage 61 - X - Car - Track - {int(mins):02d}.{secs:06.3f} - "
+        f"07KXG5HFAB6EPNJ7BMMFRV13JB.csv"
+    )
+    truncated.to_csv(bad, index=False)
+
+    with pytest.raises(ValueError, match="does not match"):
+        read_garage61_csv(bad)
+
+
+def test_non_ascii_metadata_survives_roundtrip(g61_csv, tmp_path) -> None:
+    """Driver/car/track names containing ö, é, ń must survive the full
+    format -> write -> parse -> read pipeline unchanged."""
+    from iracing_core.garage61 import (
+        format_garage61_filename,
+        parse_garage61_filename,
+        read_garage61_csv,
+    )
+
+    _, original = g61_csv
+    driver = "Köster"              # ö
+    car = "Café GT3"              # é
+    track = "Circuit de Gdańsk"   # ń
+    lap_id = "08KXG5HFAB6EPNJ7BMMFRV13JB"
+
+    name = format_garage61_filename(driver, car, track, original.lap_time, lap_id)
+
+    # filename-level round trip keeps every non-ASCII character intact
+    info = parse_garage61_filename(name)
+    assert info["driver"] == driver
+    assert info["car"] == car
+    assert info["track"] == track
+    assert info["lap_id"] == lap_id
+    assert (
+        format_garage61_filename(
+            info["driver"], info["car"], info["track"],
+            info["lap_time"], info["lap_id"],
+        )
+        == name
+    )
+
+    # and it survives an actual CSV read, flowing into the resulting LapData
+    path = _write_g61_csv(tmp_path / name, original, original.lap_time)
+    lap = read_garage61_csv(path)
+    assert lap.meta.driver_name == driver
+    assert lap.meta.car_screen_name == car
+    assert lap.meta.track_display_name == track
+    assert lap.lap_time == pytest.approx(original.lap_time, abs=0.02)

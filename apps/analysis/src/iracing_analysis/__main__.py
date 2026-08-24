@@ -5,6 +5,9 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
+from pathlib import Path
+
+from .telemetry import telemetry_dir_error
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -25,6 +28,15 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
+
+    # Validate an explicitly-supplied telemetry dir up front so a typo or
+    # empty folder fails fast with a clean message instead of a traceback
+    # or a blank GUI. (The --demo path generates its own folder.)
+    if not args.demo and args.telemetry_dir is not None:
+        error = telemetry_dir_error(args.telemetry_dir)
+        if error:
+            print(f"error: {error}", file=sys.stderr)
+            return 1
 
     from PySide6.QtWidgets import QApplication
 
@@ -49,7 +61,6 @@ def _make_demo_dir() -> str:
     """Write a synthetic session to a temp folder so the app can be explored
     without any iRacing telemetry at hand."""
     import tempfile
-    from pathlib import Path
 
     from iracing_core.testing.ibt_writer import write_ibt
     from iracing_core.testing.synthetic import build_session, default_track

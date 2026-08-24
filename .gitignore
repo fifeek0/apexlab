@@ -50,3 +50,7 @@ docs/llm-training-wiki.md
 # OS
 .DS_Store
 Thumbs.db
+
+# Internal training-data export tool (not part of public app)
+apps/analysis/src/iracing_analysis/export_summaries.py
+apps/analysis/tests/test_export_summaries.py
